@@ -17,7 +17,7 @@
 # Bahlai, C and KI Perry. 2024. BahlaiLab/Ohio_ladybeetles: Ecological
 # applications manuscript final code (V1.1). Zenodo. https://doi.org/10.5281/zenodo.11263088 
 #
-# Kayla I Perry
+# Kayla I Perry & Christie A Bahlai
 # 9 November 2025
 #____________________________________________________________________________________________
 
@@ -340,26 +340,7 @@ str(lb_all)
 sum(lb_all$Hippodamia.convergens)
 
 
-#try model that is linear with Totalcount (minus the captures of hcon to make it independent) 
-#and has a gaussian process-based spatial relationship
-
-hcon.gam <- gam(Hippodamia.convergens ~ s(lon, lat, bs="gp") +
-                offset(log(1+Totalcount-Hippodamia.convergens)), 
-              data = lb_all, family="nb")
-summary(hcon.gam)
-AIC(hcon.gam)
-
-
-hcon.gam.inv<-gam(Hippodamia.convergens ~ s(lon, lat, by=Decade, bs="gp") +
-                    offset(log(1+Totalcount-Hippodamia.convergens)), 
-                  data = lb_all, family="nb")
-summary(hcon.gam.inv)
-AIC(hcon.gam.inv)
-
-
-#So let's use the sampling as our 'base model' and take out the spatial stuff because 
-#it will be autocorrelated with other values
-#iterative process-use AIC as selection criterion
+# iterative process for model selection - use AIC as selection criterion
 
 hcon.gam1 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
                  s(Decade, sp=0.5, k=4)+
@@ -429,7 +410,7 @@ visreg(hcon.gam3, "Forest", ylab="Captures")
 visreg(hcon.gam3, "Developed",  ylab="Captures")
 
 
-# Used AIC model selection to assess landscape parameters
+# Used AIC model selection to assess landscape parameters (not shown)
 
 # final model: 
 
@@ -449,6 +430,7 @@ AIC(hcon.gam4)
 # Causes similar problems as colinearity
 
 concurvity(hcon.gam4)
+#https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/concurvity.html
 
 # Decade
 hcon.decade <- visreg(hcon.gam3, "Decade",  ylab="Residual captures",
