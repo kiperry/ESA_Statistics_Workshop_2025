@@ -341,6 +341,15 @@ sum(lb_all$Hippodamia.convergens)
 
 
 # iterative process for model selection - use AIC as selection criterion
+# the Akaike Information Criterion (AIC) is a comparative metric of model performance,
+# where lower scores indicate improved performance/fit compared to other considered models.
+
+# GAMs capture non-linear relationships by fitting a smooth function through the data
+# smooth terms are specified using s(x), where x is the predictor variable
+# multiple smooth terms to select: https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/smooth.terms.html
+# s() indicates the smooth function, of which the default is thin ploate regression spline
+# The smooth functions have several parameters that can be set to change their behavior.
+
 
 hcon.gam1 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
                  s(Decade, sp=0.5, k=4)+
@@ -352,7 +361,16 @@ hcon.gam1 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.conv
                  s(Developed, sp=0.5), 
                data=lb_all, family="nb")
 summary(hcon.gam1)
+# Effective degrees of freedon (edf) is related to the smoothing parameter, with higher edf
+# indicating the term is more non-linear
+# k sets the number of base functions used to create a smooth function
+# higher k = more smoothing, but be careful to not overfit!
+
 AIC(hcon.gam1)
+
+# visreg produces a plot showing the predicted relationship between a predictor and the response,
+# while holding other variables constant
+# plot includes fitted curve, confidience band, and partial residuals
 
 visreg(hcon.gam1, "Decade",  ylab="Captures")
 visreg(hcon.gam1, "lon",  ylab="Captures")
