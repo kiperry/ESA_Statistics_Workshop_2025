@@ -324,15 +324,9 @@ gglbnmds
 #________________________________________________________________________________________
 # Part 3: Responses of native lady beetles using generalized additive models (GAMs) ----
 
-library(mgcv) #
-library(GGally)
-library(visreg) #
-library(mgcViz)
-library(grid)
-library(gridExtra)
-library(ggplotify)
-library(cowplot)
-library(ggpubr)
+library(mgcv) 
+library(visreg) 
+
 
 lb_all <- read.csv("data/ladybeetle_gams.csv")
 str(lb_all)
