@@ -21,8 +21,7 @@
 # 9 November 2025
 #____________________________________________________________________________________________
 
-# Beta-diversity over time ----
-## Partition into turnover and nestedness components ----
+# Part 1: Partition beta-diversity into turnover and nestedness components ----
 
 # load in the data
 lb.b <- read.csv("data/ladybeetle_betadiversity.csv")
@@ -231,7 +230,7 @@ ggplot(data = beta.final, aes(x = decade, y = beta.div, fill = beta.var)) +
 
 
 #________________________________________________________________________________________
-## Nonmetric multidimensional scaling ----
+# Part 2: Nonmetric multidimensional scaling ----
 
 # load in the data
 lb_raw <- read.csv("data/ladybeetle_data.csv")
@@ -323,11 +322,11 @@ gglbnmds <- lbnmds$plot +
 gglbnmds
 
 #________________________________________________________________________________________
-## Responses of native lady beetles using generalized additive models (GAMs) ----
+# Part 3: Responses of native lady beetles using generalized additive models (GAMs) ----
 
-library(mgcv)
+library(mgcv) #
 library(GGally)
-library(visreg)
+library(visreg) #
 library(mgcViz)
 library(grid)
 library(gridExtra)
@@ -338,90 +337,36 @@ library(ggpubr)
 lb_all <- read.csv("data/ladybeetle_gams.csv")
 str(lb_all)
 
-# assess changes in captures of native species using GAMs
+# Evaluate relative importance of temporal, spatial, landscape, and community factors on
+# the captures of native lady beetle species using negative binomial generalized additive models (GAMs)
 # Use Hippodamia covergens as an example
 
-#first, how many captures are we working with?
-sum(lb_all2$Hippodamia.convergens)
+# first, how many captures are we working with?
+sum(lb_all$Hippodamia.convergens)
 
 
 #try model that is linear with Totalcount (minus the captures of hcon to make it independent) 
 #and has a gaussian process-based spatial relationship
-hcon.gam<-gam(Hippodamia.convergens~s(lon, lat, bs="gp")+
+
+hcon.gam <- gam(Hippodamia.convergens ~ s(lon, lat, bs="gp") +
                 offset(log(1+Totalcount-Hippodamia.convergens)), 
-              data=lb_all2, family="nb")
+              data = lb_all, family="nb")
 summary(hcon.gam)
 AIC(hcon.gam)
-b<-getViz(hcon.gam)
 
-hcon.gam.inv<-gam(Hippodamia.convergens~s(lon, lat, by=Decade30, bs="gp")+
+
+hcon.gam.inv<-gam(Hippodamia.convergens ~ s(lon, lat, by=Decade, bs="gp") +
                     offset(log(1+Totalcount-Hippodamia.convergens)), 
-                  data=lb_all2, family="nb")
+                  data = lb_all, family="nb")
 summary(hcon.gam.inv)
 AIC(hcon.gam.inv)
-b.inv<-getViz(hcon.gam.inv)
 
-
-hconmap<- plot(b, select=1)+theme_classic()+
-  xlab("Longitude")+ylab("Latitude")+ggtitle(NULL)+
-  theme(aspect.ratio=1,legend.background=element_blank(), 
-        legend.title = element_blank(), legend.text = element_blank(),
-        plot.margin=unit(c(1, 3, 0.5, 1), "lines"))+
-  annotation_custom(text_high, xmin=-79.7,xmax=-79.7,ymin=40.55,ymax=40.55)+
-  annotation_custom(text_low, xmin=-79.7,xmax=-79.7,ymin=39.70,ymax=39.70)+
-  annotation_custom(text_key, xmin=-79.9,xmax=-79.9,ymin=40.77,ymax=40.77)+
-  coord_cartesian(clip = "off")
-
-hconmap
-hcon.gb<-grid.grabExpr(print(hconmap))
-
-
-#make the maps for each of the invasion periods
-
-hconmap.inv.1<- plot(b.inv, select=1)+theme_classic()+
-  xlab(NULL)+ylab(NULL)+ggtitle(NULL)+
-  theme(legend.position="none", aspect.ratio=1)
-
-hconmap.inv.1
-hcon1.gb<-grid.grabExpr(print(hconmap.inv.1))
-
-hconmap.inv.2<- plot(b.inv, select=2)+theme_classic()+
-  xlab(NULL)+ylab(NULL)+ggtitle(NULL)+
-  theme(legend.position="none", aspect.ratio=1)
-
-hconmap.inv.2
-hcon2.gb<-grid.grabExpr(print(hconmap.inv.2))
-
-hconmap.inv.3<- plot(b.inv, select=3)+theme_classic()+
-  xlab(NULL)+ylab(NULL)+ggtitle(NULL)+
-  theme(legend.position="none", aspect.ratio=1)
-
-hconmap.inv.3
-hcon3.gb<-grid.grabExpr(print(hconmap.inv.3))
-
-hconmap.inv.4<- plot(b.inv, select=4)+theme_classic()+
-  xlab(NULL)+ylab(NULL)+ggtitle(NULL)+
-  theme(legend.position="none", aspect.ratio=1)
-
-hconmap.inv.4
-hcon4.gb<-grid.grabExpr(print(hconmap.inv.4))
-
-#All right, let's put these together nicely
-
-hcon.4<-plot_grid(hcon1.gb, hcon2.gb, hcon3.gb, hcon4.gb, ncol=2, labels=c('B', 'C', 'D', 'E'))
-hcon.4
-
-hcon.all<-plot_grid(hcon.gb, hcon.4, ncol=2, rel_widths=c(6,4), labels=c('A', NULL))
-hcon.all
-
-pdf("plots/hcon_distribution.pdf", height=5, width=11)
-grid.draw(hcon.all)
-dev.off()
 
 #So let's use the sampling as our 'base model' and take out the spatial stuff because 
 #it will be autocorrelated with other values
 #iterative process-use AIC as selection criterion
-hcon.gam1<-gam(Hippodamia.convergens~offset(log(1+Totalcount-Hippodamia.convergens))+
+
+hcon.gam1 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
                  s(Decade, sp=0.5, k=4)+
                  s(lon, sp=0.5)+
                  s(lat, sp=0.5)+
@@ -429,7 +374,7 @@ hcon.gam1<-gam(Hippodamia.convergens~offset(log(1+Totalcount-Hippodamia.converge
                  s(Agriculture, sp=0.5)+
                  s(Forest, sp=0.5)+
                  s(Developed, sp=0.5), 
-               data=lb_all2, family="nb")
+               data=lb_all, family="nb")
 summary(hcon.gam1)
 AIC(hcon.gam1)
 
@@ -442,56 +387,76 @@ visreg(hcon.gam1, "Forest", ylab="Captures")
 visreg(hcon.gam1, "Developed",  ylab="Captures")
 
 
-#replace totalinvasive with two major invasives
+# replace total invasives with proportion of invasives
 
-summary(lb_all2)
-
-hcon.gam2<-gam(Hippodamia.convergens~offset(log(1+Totalcount-Hippodamia.convergens))+
-                 s(Decade, sp=0.5, k=4)+
-                 s(lon, sp=0.5)+
-                 s(lat, sp=0.5)+
-                 s(Propinvasive, sp=0.5)+
-                 #s(log(1+Coccinella.septempunctata), sp=0.5, k=4)+
-                 #s(log(1+Harmonia.axyridis), sp=0.5, k=4)+
-                 s(Agriculture, sp=0.5)+
-                 s(Forest, sp=0.5)+
-                 s(Developed, sp=0.5),  
-               data=lb_all2, family="nb")
+hcon.gam2 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
+                   s(Decade, sp=0.5, k=4)+
+                   s(lon, sp=0.5)+
+                   s(lat, sp=0.5)+
+                   s(Propinvasive, sp=0.5)+
+                   s(Agriculture, sp=0.5)+
+                   s(Forest, sp=0.5)+
+                   s(Developed, sp=0.5),  
+                 data=lb_all, family="nb")
 summary(hcon.gam2)
 AIC(hcon.gam2)
 
 visreg(hcon.gam2, "Decade",  ylab="Captures")
-#visreg(hcon.gam2, "lon",  ylab="Captures")
+visreg(hcon.gam2, "lon",  ylab="Captures")
 visreg(hcon.gam2, "lat",  ylab="Captures")
 visreg(hcon.gam2, "Propinvasive",  ylab="Captures")
-#visreg(hcon.gam2, "Coccinella.septempunctata",  ylab="Captures")
-#visreg(hcon.gam2, "Harmonia.axyridis",  ylab="Captures")
 visreg(hcon.gam2, "Agriculture",  ylab="Captures")
 visreg(hcon.gam2, "Forest", ylab="Captures")
 visreg(hcon.gam2, "Developed",  ylab="Captures")
 
+# replace proportion invasive with the two major invasive species
+
+hcon.gam3 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
+                 s(Decade, sp=0.5, k=4)+
+                 s(lon, sp=0.5)+
+                 s(lat, sp=0.5)+
+                 s(log(1+Coccinella.septempunctata), sp=0.5, k=4)+
+                 s(log(1+Harmonia.axyridis), sp=0.5, k=4)+
+                 s(Agriculture, sp=0.5)+
+                 s(Forest, sp=0.5)+
+                 s(Developed, sp=0.5),  
+               data=lb_all, family="nb")
+summary(hcon.gam3)
+AIC(hcon.gam3)
+
+visreg(hcon.gam3, "Decade",  ylab="Captures")
+visreg(hcon.gam3, "lon",  ylab="Captures")
+visreg(hcon.gam3, "lat",  ylab="Captures")
+visreg(hcon.gam3, "Coccinella.septempunctata",  ylab="Captures")
+visreg(hcon.gam3, "Harmonia.axyridis",  ylab="Captures")
+visreg(hcon.gam3, "Agriculture",  ylab="Captures")
+visreg(hcon.gam3, "Forest", ylab="Captures")
+visreg(hcon.gam3, "Developed",  ylab="Captures")
 
 
-#Model selection to whittle down landscape parameters in final model (intermediate form statistics recorded in excel file):
+# Used AIC model selection to assess landscape parameters
 
-hcon.gam3<-gam(Hippodamia.convergens~offset(log(1+Totalcount-Hippodamia.convergens))+
+# final model: 
+
+hcon.gam4 <- gam(Hippodamia.convergens ~ offset(log(1+Totalcount-Hippodamia.convergens)) +
                  s(Decade, sp=0.5, k=4)+
                  s(lat, sp=0.5)+
                  s(log(1+Coccinella.septempunctata), sp=0.5, k=4)+
                  s(log(1+Harmonia.axyridis), sp=0.5, k=4)+
                  s(Developed, sp=0.5),  
-               data=lb_all2, family="nb")
-summary(hcon.gam3)
-AIC(hcon.gam3)
+               data=lb_all, family="nb")
+summary(hcon.gam4)
+AIC(hcon.gam4)
 
-#for all the 'final' models as chosen by AIC, check the concurvity to identify variables where concurvity is 
-#likely to be causing an issue in the final fit. Eliminate variables with overall estimated concurvity >0.8 
-# (do this one by one and recalculate, record stats in the model selection spreadhseet)
+# for all the 'final' models as chosen by AIC, check the concurvity to identify variables where concurvity is 
+# likely to be causing an issue in the final fit. Eliminate variables with overall estimated concurvity >0.8 
+# Concurvity occurs when some smooth term in a model could be approximated by one or more of the other smooth terms in the model.
+# Causes similar problems as colinearity
 
-concurvity(hcon.gam3)
-#ok, can stay as is!
+concurvity(hcon.gam4)
 
-hcon.decade<-visreg(hcon.gam3, "Decade",  ylab="Residual captures",
+# Decade
+hcon.decade <- visreg(hcon.gam3, "Decade",  ylab="Residual captures",
                     xlab=expression(paste("Year")),
                     gg=T,
                     line=list(col="gray19"),
@@ -500,15 +465,7 @@ hcon.decade<-visreg(hcon.gam3, "Decade",  ylab="Residual captures",
   theme_classic()
 hcon.decade
 
-# hcon.lon<-visreg(hcon.gam3, "lon",  ylab="Residual captures",
-#                  xlab=expression(paste("Longitude")), 
-#                  gg=T, 
-#                  line=list(col="gray28"),
-#                  fill=list(col="gray", fill="gray"),
-#                  points=list(size=1, pch=21, fill="gray28", col="black"))+
-#   theme_classic()
-# hcon.lon
-
+# Latitude
 hcon.lat<-visreg(hcon.gam3, "lat",  ylab="Residual captures",
                  xlab=expression(paste("Latitude")),
                  gg=T,
@@ -518,15 +475,7 @@ hcon.lat<-visreg(hcon.gam3, "lat",  ylab="Residual captures",
   theme_classic()
 hcon.lat
 
-# hcon.pi<-visreg(hcon.gam3, "Propinvasive",  ylab="Residual captures",
-#                 xlab=expression(paste("Proportion invasive")),
-#                 gg=T,
-#                 line=list(col="darkmagenta"),
-#                 fill=list(col="plum1", fill="plum1"),
-#                 points=list(size=1, pch=22, fill="darkmagenta", col="black"))+
-#   theme_classic()
-# hcon.pi
-
+# C. septempunctata
 hcon.c7<-visreg(hcon.gam3, "Coccinella.septempunctata",  ylab="Residual captures",
                 xlab=expression(paste("Captures of ", italic("Coccinella septempunctata"))),
                 gg=T,
@@ -536,6 +485,7 @@ hcon.c7<-visreg(hcon.gam3, "Coccinella.septempunctata",  ylab="Residual captures
   theme_classic()
 hcon.c7
 
+# H. axyridis
 hcon.ha<-visreg(hcon.gam3, "Harmonia.axyridis",  ylab="Residual captures",
                 xlab=expression(paste("Captures of ", italic("Harmonia axyridis"))),
                 gg=T,
@@ -545,15 +495,7 @@ hcon.ha<-visreg(hcon.gam3, "Harmonia.axyridis",  ylab="Residual captures",
   theme_classic()
 hcon.ha
 
-
-# hcon.agriculture<-visreg(hcon.gam3, "Agriculture", ylab="Residual Captures", xlab="% Agriculture cover", 
-#                          gg=T, 
-#                          line=list(col="darkolivegreen4"),
-#                          fill=list(col="darkolivegreen1", fill="darkolivegreen1"),
-#                          points=list(size=1, pch=23, fill="darkolivegreen4", col="black"))+
-#   theme_classic()
-# hcon.agriculture
-
+# Developed
 hcon.developed<-visreg(hcon.gam3, "Developed", ylab="Residual Captures", xlab="% Developed cover",
                        gg=T,
                        line=list(col="slategray4"),
@@ -561,167 +503,3 @@ hcon.developed<-visreg(hcon.gam3, "Developed", ylab="Residual Captures", xlab="%
                        points=list(size=1, pch=23, fill="slategray4", col="black"))+
   theme_classic()
 hcon.developed
-
-
-# Predicted captures
-
-##############
-#hcon intervals  for decade, lat, c7, ha, dev
-
-#decade
-newDecade <- with(lb_all2,
-                  data.frame(Decade = seq(min(Decade), max(Decade), length = 100),
-                             Totalcount=500,
-                             lat=mean(lat), 
-                             Coccinella.septempunctata=mean(Coccinella.septempunctata),
-                             Harmonia.axyridis=mean(Harmonia.axyridis),
-                             Developed=mean(Developed, na.rm=T)))
-
-
-#lat
-newlat <- with(lb_all2,
-               data.frame(Decade = d,
-                          Totalcount=500, 
-                          lat=seq(min(lat), max(lat), length = 100), 
-                          Coccinella.septempunctata=mean(Coccinella.septempunctata),
-                          Harmonia.axyridis=mean(Harmonia.axyridis),
-                          Developed=mean(Developed, na.rm=T)))
-
-#C7
-newC7 <- with(lb_all2,
-              data.frame(Decade = d,
-                         Totalcount=500, 
-                         lat=mean(lat), 
-                         Coccinella.septempunctata=seq(min(Coccinella.septempunctata), max(Coccinella.septempunctata), length = 100),
-                         Harmonia.axyridis=mean(Harmonia.axyridis),
-                         Developed=mean(Developed, na.rm=T)))
-#HA
-newHA <- with(lb_all2,
-              data.frame(Decade = d,
-                         Totalcount=500, 
-                         lat=mean(lat),
-                         Coccinella.septempunctata=mean(Coccinella.septempunctata),
-                         Harmonia.axyridis=seq(min(Harmonia.axyridis), 15, length = 100),
-                         Developed=mean(Developed, na.rm=T)))
-
-
-#Developed
-newDeveloped <- with(lb_all2,
-                     data.frame(Decade = d,
-                                Totalcount=500,
-                                lat=mean(lat), 
-                                Coccinella.septempunctata=mean(Coccinella.septempunctata),
-                                Harmonia.axyridis=mean(Harmonia.axyridis),
-                                Developed=seq(min(Developed, na.rm=T), max(Developed, na.rm=T), length = 100)))
-
-
-
-
-#pull in final model from other analysis, just cut the number of that species in the offset
-
-hcon.gam4<-gam(Hippodamia.convergens~offset(log(1+Totalcount))+
-                 s(Decade, sp=0.5, k=4)+
-                 s(lat, sp=0.5)+
-                 s(log(1+Coccinella.septempunctata), sp=0.5, k=4)+
-                 s(log(1+Harmonia.axyridis), sp=0.5, k=4)+
-                 s(Developed, sp=0.5),  
-               data=lb_all2, family="nb")
-summary(hcon.gam4)
-AIC(hcon.gam4)
-
-
-hcon.pred<-predict.gam(hcon.gam4, newDecade, se.fit = T, type="link")
-hcon.pred<-cbind(newDecade,hcon.pred)
-hcon.pred$lower<-hcon.pred$fit-2*hcon.pred$se.fit
-hcon.pred$upper<-hcon.pred$fit+2*hcon.pred$se.fit
-
-#decade
-#set decade for rest of analyses
-d<-2000
-fitscpace<-5
-
-this.slope<-(max(hcon.pred$Decade)-min(hcon.pred$Decade))*((lm(hcon.pred$fit~hcon.pred$Decade))$coefficients[2])/fitspace
-colindex<-which.min(abs(scalePal - this.slope))
-##
-hcon.pred.decade<-ggplot(data=hcon.pred, aes(Decade, fit))+
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill=discrbPallt[colindex], alpha=0.6)+
-  geom_line(color=discrbPal[colindex])+
-  theme_classic()+
-  xlim(1929, 2011)+
-  xlab(expression(paste("Year")))+ylab("Predicted captures")+
-  coord_cartesian(ylim=c(-0.1, fitspace))
-hcon.pred.decade
-
-
-#lat
-hcon.pred<-predict.gam(hcon.gam4, newlat, se.fit = T, type="link")
-hcon.pred<-cbind(newlat,hcon.pred)
-hcon.pred$lower<-hcon.pred$fit-2*hcon.pred$se.fit
-hcon.pred$upper<-hcon.pred$fit+2*hcon.pred$se.fit
-
-this.slope<-(max(hcon.pred$lat)-min(hcon.pred$lat))*((lm(hcon.pred$fit~hcon.pred$lat))$coefficients[2])/fitspace
-colindex<-which.min(abs(scalePal - this.slope))
-
-
-hcon.pred.lat<-ggplot(data=hcon.pred, aes(lat, fit))+
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill=discrbPallt[colindex], alpha=0.6)+
-  geom_line(color=discrbPal[colindex])+
-  theme_classic()+
-  xlab(expression(paste("Latitude")))+ylab("Predicted captures")+
-  coord_cartesian(ylim=c(-0.1, fitspace))
-hcon.pred.lat
-
-
-#c7
-
-hcon.pred<-predict.gam(hcon.gam4, newC7, se.fit = T, type="link")
-hcon.pred<-cbind(newC7,hcon.pred)
-hcon.pred$lower<-hcon.pred$fit-2*hcon.pred$se.fit
-hcon.pred$upper<-hcon.pred$fit+2*hcon.pred$se.fit
-
-this.slope<-(max(hcon.pred$Coccinella.septempunctata)-min(hcon.pred$Coccinella.septempunctata))*((lm(hcon.pred$fit~hcon.pred$Coccinella.septempunctata))$coefficients[2])/fitspace
-colindex<-which.min(abs(scalePal - this.slope))
-
-hcon.pred.c7<-ggplot(data=hcon.pred, aes(Coccinella.septempunctata, fit))+
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill=discrbPallt[colindex], alpha=0.6)+
-  geom_line(color=discrbPal[colindex])+
-  theme_classic()+
-  xlab(expression(paste("Captures of ", italic("Coccinella septempunctata"))))+ylab("Predicted captures")+
-  coord_cartesian(ylim=c(-0.1, fitspace))
-hcon.pred.c7
-
-#harmonia
-
-hcon.pred<-predict.gam(hcon.gam4, newHA, se.fit = T, type="link")
-hcon.pred<-cbind(newHA,hcon.pred)
-hcon.pred$lower<-hcon.pred$fit-2*hcon.pred$se.fit
-hcon.pred$upper<-hcon.pred$fit+2*hcon.pred$se.fit
-
-this.slope<-(max(hcon.pred$Harmonia.axyridis)-min(hcon.pred$Harmonia.axyridis))*((lm(hcon.pred$fit~hcon.pred$Harmonia.axyridis))$coefficients[2])/fitspace
-colindex<-which.min(abs(scalePal - this.slope))
-
-hcon.pred.ha<-ggplot(data=hcon.pred, aes(Harmonia.axyridis, fit))+
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill=discrbPallt[colindex], alpha=0.6)+
-  geom_line(color=discrbPal[colindex])+
-  theme_classic()+
-  xlab(expression(paste("Captures of ", italic("Harmonia axyridis"))))+ylab("Predicted captures")+
-  coord_cartesian(ylim=c(-0.1, fitspace))
-hcon.pred.ha
-
-
-#Developed
-hcon.pred<-predict.gam(hcon.gam4, newDeveloped, se.fit = T, type="link")
-hcon.pred<-cbind(newDeveloped,hcon.pred)
-hcon.pred$lower<-hcon.pred$fit-2*hcon.pred$se.fit
-hcon.pred$upper<-hcon.pred$fit+2*hcon.pred$se.fit
-
-this.slope<-(max(hcon.pred$Developed)-min(hcon.pred$Developed))*((lm(hcon.pred$fit~hcon.pred$Developed))$coefficients[2])/fitspace
-colindex<-which.min(abs(scalePal - this.slope))
-
-hcon.pred.developed<-ggplot(data=hcon.pred, aes(Developed, fit))+
-  geom_ribbon(aes(ymin=lower, ymax=upper), fill=discrbPallt[colindex], alpha=0.6)+
-  geom_line(color=discrbPal[colindex])+
-  theme_classic()+
-  xlab(expression(paste("% Developed cover")))+ylab("Predicted captures")+
-  coord_cartesian(ylim=c(-0.1, fitspace))
-hcon.pred.developed
